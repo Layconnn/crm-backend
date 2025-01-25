@@ -5,7 +5,7 @@ const User = require("../models/user"); // Assuming you have a User model for Mo
 
 // Handle user registration
 const registerUser = async (req, res) => {
-  const { email, password } = req.body;
+  const { name, email, password } = req.body;
 
   try {
     // Check if user already exists
@@ -19,6 +19,7 @@ const registerUser = async (req, res) => {
 
     // Create a new user
     const newUser = new User({
+      name,
       email,
       password: hashedPassword,
     });
@@ -39,6 +40,7 @@ const registerUser = async (req, res) => {
     res.status(201).json({
       token,
       userId: newUser._id,  // Include userId in the response
+      name: newUser.name,
       email: newUser.email,  // Optionally return email or other user data
     });
   } catch (error) {
