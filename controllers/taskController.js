@@ -34,12 +34,13 @@ const getTask = async (req, res) => {
 // @route   POST /api/tasks
 // @access  Private (User must be authenticated)
 const createTask = async (req, res) => {
-  const { title, description, dueDate, priority } = req.body;
+  const { title, status, description, dueDate, priority } = req.body;
 
   try {
     const newTask = new Task({
       title,
       description,
+      status,
       dueDate,
       priority,
       user: req.user.id, // Associate the task with the user
