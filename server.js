@@ -7,6 +7,7 @@ const authRoutes = require('./routes/authRoutes');
 const contactRoutes = require('./routes/contactRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const salesOpportunityRoutes = require('./routes/salesOpportunityRoutes');
+const analyticsRoutes = require('./routes/analyticRoutes');
 const userRoutes = require('./routes/userRoutes');
 const formatResponseDates = require('./middleware/formatResponseDate');
 const authMiddleware = require('./middleware/authMiddleware');
@@ -29,6 +30,7 @@ connectDB();  // Ensure connectDB handles connection setup correctly
 app.use('/api/auth', authRoutes); // Use the authentication routes (no auth middleware here)
 
 app.use(authMiddleware); // Apply the auth middleware globally
+app.use('/api/analytics', analyticsRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/contacts', contactRoutes);

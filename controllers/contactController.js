@@ -1,4 +1,5 @@
 const Contact = require('../models/contacts');
+const mongoose = require("mongoose");
 
 // @desc    Create a new contact
 // @route   POST /api/contacts
@@ -100,10 +101,41 @@ const deleteContact = async (req, res) => {
   }
 };
 
+// @desc    Get contact analytics
+// @route   GET /api/contacts/analytics
+// @access  Private
+const getContactAnalytics = async (req) => {
+  try {
+    const userId = new mongoose.Types.ObjectId(req.user.id); // Ensure ObjectId
+
+    const contactAnalytics = await Contact.aggregate([
+      { $match: { user: userId } },
+      {
+        $group: {
+          _id: "$company", // Group by company
+          contactCount: { $sum: 1 }, // Count contacts per company
+        },
+      },
+    ]);
+
+    console.log("Raw Contact Analytics:", JSON.stringify(contactAnalytics, null, 2));
+
+    return {
+      data: contactAnalytics ?? [],
+    };
+  } catch (error) {
+    console.error("Error fetching contact analytics:", error);
+    throw new Error("Error fetching contact analytics");
+  }
+};
+
+
+
 module.exports = {
   createContact,
   getContacts,
   getContactById,
   updateContact,
   deleteContact,
+  getContactAnalytics,
 };

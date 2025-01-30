@@ -1,4 +1,5 @@
 const Task = require('../models/tasks');
+const mongoose = require('mongoose');
 
 // @desc    Get all tasks
 // @route   GET /api/tasks
@@ -11,7 +12,6 @@ const getTasks = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
-
 
 // @desc    Get a single task by ID
 // @route   GET /api/tasks/:id
@@ -91,6 +91,87 @@ const deleteTask = async (req, res) => {
   }
 };
 
+// @desc    Get Task Analytics
+// @route   GET /api/task-analytics
+// @access  Private (User must be authenticated)
+const getTaskAnalytics = async (req) => {
+  try {
+    const userId = new mongoose.Types.ObjectId(req.user.id); // Ensure ObjectId
+
+    const analytics = await Task.aggregate([
+      { $match: { user: userId } },
+      {
+        $facet: {
+          tasksByStatus: [
+            {
+              $group: {
+                _id: "$status",
+                count: { $sum: 1 },
+              },
+            },
+          ],
+
+          tasksByPriority: [
+            {
+              $group: {
+                _id: "$priority",
+                count: { $sum: 1 },
+              },
+            },
+          ],
+
+          taskCompletionRate: [
+            {
+              $group: {
+                _id: null,
+                completedTasks: {
+                  $sum: { $cond: [{ $eq: ["$status", "Completed"] }, 1, 0] },
+                },
+                totalTasks: { $sum: 1 },
+              },
+            },
+            {
+              $project: {
+                _id: 0,
+                completionRate: {
+                  $cond: [
+                    { $gt: ["$totalTasks", 0] },
+                    { $multiply: [{ $divide: ["$completedTasks", "$totalTasks"] }, 100] }, // Convert to percentage
+                    0,
+                  ],
+                },
+              },
+            },
+          ],
+
+          tasksDistributionByUser: [
+            {
+              $group: {
+                _id: "$user",
+                count: { $sum: 1 },
+              },
+            },
+          ],
+        },
+      },
+    ]);
+
+    console.log("Raw Task Analytics:", JSON.stringify(analytics, null, 2));
+
+    const result = analytics[0];
+    return {
+      tasksByStatus: result.tasksByStatus ?? [],
+      tasksByPriority: result.tasksByPriority ?? [],
+      taskCompletionRate: result.taskCompletionRate?.[0]?.completionRate ?? 0,
+      tasksDistributionByUser: result.tasksDistributionByUser ?? [],
+    };
+  } catch (error) {
+    console.error("Error fetching task analytics:", error);
+    throw new Error("Error fetching task analytics");
+  }
+};
+
+
 // Export Controller Functions
 module.exports = {
   getTasks,
@@ -98,4 +179,5 @@ module.exports = {
   createTask,
   updateTask,
   deleteTask,
+  getTaskAnalytics, // Add the analytics function to exports
 };

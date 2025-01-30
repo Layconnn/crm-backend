@@ -1,4 +1,5 @@
 const SalesOpportunity = require('../models/sales');
+const mongoose = require('mongoose');
 
 // @desc    Get all sales opportunities
 // @route   GET /api/sales-opportunities
@@ -92,6 +93,80 @@ const deleteSalesOpportunity = async (req, res) => {
   }
 };
 
+// @desc    Get Sales Analytics
+// @route   GET /api/sales-analytics
+// @access  Private (User must be authenticated)
+const getSalesAnalytics = async (req) => {
+  try {
+    const userId = new mongoose.Types.ObjectId(req.user.id); // Ensure ObjectId
+
+    const analytics = await SalesOpportunity.aggregate([
+      { $match: { user: userId } }, // Filter by user
+
+      {
+        $facet: {
+          salesByStage: [
+            {
+              $group: {
+                _id: "$stage",
+                count: { $sum: 1 },
+              },
+            },
+          ],
+
+          salesByPriority: [
+            {
+              $group: {
+                _id: "$priority",
+                count: { $sum: 1 },
+              },
+            },
+          ],
+
+          salesDistributionByUser: [
+            {
+              $group: {
+                _id: "$user",
+                count: { $sum: 1 },
+              },
+            },
+          ],
+
+          totalSalesValue: [
+            {
+              $group: {
+                _id: null,
+                totalValue: { $sum: "$value" },
+              },
+            },
+            {
+              $project: {
+                _id: 0,
+                totalSalesValue: "$totalValue",
+              },
+            },
+          ],
+        },
+      },
+    ]);
+
+    console.log("Raw Sales Analytics:", JSON.stringify(analytics, null, 2));
+
+    const result = analytics[0];
+
+    return {
+      salesByStage: result.salesByStage ?? [],
+      salesByPriority: result.salesByPriority ?? [],
+      salesDistributionByUser: result.salesDistributionByUser ?? [],
+      totalSalesValue: result.totalSalesValue?.[0]?.totalSalesValue ?? 0,
+    };
+  } catch (error) {
+    console.error("Error fetching sales analytics:", error);
+    throw new Error("Error fetching sales analytics");
+  }
+};
+
+
 // Export Controller Functions
 module.exports = {
   getSalesOpportunities,
@@ -99,4 +174,5 @@ module.exports = {
   createSalesOpportunity,
   updateSalesOpportunity,
   deleteSalesOpportunity,
+  getSalesAnalytics,
 };
