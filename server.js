@@ -11,6 +11,8 @@ const analyticsRoutes = require('./routes/analyticRoutes');
 const userRoutes = require('./routes/userRoutes');
 const formatResponseDates = require('./middleware/formatResponseDate');
 const authMiddleware = require('./middleware/authMiddleware');
+const https = require('https'); // For the keep-alive ping
+const cron = require('node-cron'); // For scheduling the ping
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -43,4 +45,28 @@ app.use(formatResponseDates);
 // Start the server
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
+});
+
+// Keep the app active on Render by pinging it every 5 minutes
+function keepAlive(url) {
+  https
+    .get(url, (res) => {
+      console.log(`Status: ${res.statusCode}`);
+    })
+    .on("error", (error) => {
+      console.error(`Error: ${error.message}`);
+    });
+}
+
+// Replace with your actual Render URL
+const urlToPing = process.env.RENDER_URL;
+
+// Schedule a ping every 5 minutes using cron
+cron.schedule("*/5 * * * *", () => {
+  if (urlToPing) {
+    keepAlive(urlToPing);
+    console.log("Pinging the server every 5 minutes");
+  } else {
+    console.error("RENDER_URL is not defined.");
+  }
 });
